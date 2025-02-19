@@ -1,27 +1,57 @@
+
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { useStore } from "@/store";
+import Login from "@/pages/Login";
+import WaiterDashboard from "@/pages/WaiterDashboard";
+import ChefDashboard from "@/pages/ChefDashboard";
 
-const queryClient = new QueryClient();
+const ProtectedRoute = ({
+  children,
+  allowedRole,
+}: {
+  children: React.ReactNode;
+  allowedRole: "waiter" | "chef";
+}) => {
+  const user = useStore((state) => state.user);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== allowedRole) {
+    return <Navigate to={`/${user.role}`} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const App = () => {
+  return (
+    <BrowserRouter>
       <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/waiter"
+          element={
+            <ProtectedRoute allowedRole="waiter">
+              <WaiterDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chef"
+          element={
+            <ProtectedRoute allowedRole="chef">
+              <ChefDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 export default App;
