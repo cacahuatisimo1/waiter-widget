@@ -23,12 +23,12 @@ export const useStore = create<AppState>()(
   devtools((set) => ({
     user: null,
     orders: [],
-    tables: [],
+    tables: [], // Ensure this is initialized as an empty array
     plates: [],
     activeTable: null,
     setUser: (user) => set({ user }),
     setOrders: (orders) => set({ orders }),
-    setTables: (tables) => set({ tables }),
+    setTables: (tables) => set({ tables: Array.isArray(tables) ? tables : [] }), // Add safety check
     setPlates: (plates) => set({ plates }),
     setActiveTable: (tableId) => set({ activeTable: tableId }),
     addOrder: (order) =>

@@ -28,16 +28,29 @@ const WaiterDashboard = () => {
       
       setIsLoading(true);
       try {
-        const tables = await apiService.getTables("restaurant-1");
-        setTables(tables);
-        showToast("Tables loaded", undefined, "default", "short");
+        const fetchedTables = await apiService.getTables("restaurant-1");
+        if (Array.isArray(fetchedTables)) {
+          setTables(fetchedTables);
+          showToast("Tables loaded", undefined, "default", "short");
+        } else {
+          console.error("Received invalid tables data:", fetchedTables);
+          showToast(
+            "Error loading tables",
+            "Invalid data format",
+            "destructive",
+            "medium"
+          );
+          setTables([]); // Ensure tables is always an array
+        }
       } catch (error) {
+        console.error("Error fetching tables:", error);
         showToast(
           "Error loading tables",
           "Please try again later",
           "destructive",
           "medium"
         );
+        setTables([]); // Ensure tables is always an array
       } finally {
         setIsLoading(false);
       }
@@ -62,7 +75,6 @@ const WaiterDashboard = () => {
     try {
       const order = await apiService.getActiveOrder(tableId);
       if (order) {
-        // Handle existing order
         showToast(
           "Active order found",
           `Order #${order.id}`,
@@ -71,6 +83,7 @@ const WaiterDashboard = () => {
         );
       }
     } catch (error) {
+      console.error("Error fetching active order:", error);
       showToast(
         "Error loading order",
         "Please try again later",
@@ -79,6 +92,9 @@ const WaiterDashboard = () => {
       );
     }
   };
+
+  // Ensure tables is an array before mapping
+  const tablesToRender = Array.isArray(tables) ? tables : [];
 
   return (
     <div className="min-h-screen bg-background transition-colors">
@@ -116,8 +132,12 @@ const WaiterDashboard = () => {
                 <div className="col-span-full text-center text-muted-foreground">
                   Loading tables...
                 </div>
+              ) : tablesToRender.length === 0 ? (
+                <div className="col-span-full text-center text-muted-foreground">
+                  No tables available
+                </div>
               ) : (
-                tables.map((table) => (
+                tablesToRender.map((table) => (
                   <Button
                     key={table.id}
                     variant={activeTable === table.id ? "default" : "outline"}
