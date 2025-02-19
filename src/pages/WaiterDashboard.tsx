@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useStore } from "@/store";
 import { socketService } from "@/services/socket";
@@ -31,7 +30,9 @@ const WaiterDashboard = () => {
         const fetchedTables = await apiService.getTables("restaurant-1");
         if (Array.isArray(fetchedTables)) {
           setTables(fetchedTables);
-          showToast("Tables loaded", undefined, "default", "short");
+          if (fetchedTables.length > 0) {
+            showToast("Tables loaded", `${fetchedTables.length} tables found`, "default", "short");
+          }
         } else {
           console.error("Received invalid tables data:", fetchedTables);
           showToast(
@@ -40,7 +41,7 @@ const WaiterDashboard = () => {
             "destructive",
             "medium"
           );
-          setTables([]); // Ensure tables is always an array
+          setTables([]);
         }
       } catch (error) {
         console.error("Error fetching tables:", error);
@@ -50,7 +51,7 @@ const WaiterDashboard = () => {
           "destructive",
           "medium"
         );
-        setTables([]); // Ensure tables is always an array
+        setTables([]);
       } finally {
         setIsLoading(false);
       }
@@ -93,7 +94,6 @@ const WaiterDashboard = () => {
     }
   };
 
-  // Ensure tables is an array before mapping
   const tablesToRender = Array.isArray(tables) ? tables : [];
 
   return (
@@ -190,7 +190,6 @@ const WaiterDashboard = () => {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              // Handle update quantity
                               showToast(
                                 "Update quantity",
                                 "Feature coming soon",
@@ -209,7 +208,6 @@ const WaiterDashboard = () => {
                   <Button
                     className="w-full"
                     onClick={() => {
-                      // Handle create new order
                       showToast(
                         "Create order",
                         "Feature coming soon",

@@ -7,7 +7,7 @@ const api = axios.create({
 });
 
 export const mockEnabled = {
-  value: false,
+  value: true, // Set default to true since we don't have a real API yet
   simulateErrors: false,
 };
 
@@ -16,7 +16,7 @@ const MOCK_RESPONSE_DELAY = 500;
 const mockTables: Table[] = Array.from({ length: 10 }, (_, i) => ({
   id: `table-${i + 1}`,
   number: i + 1,
-  status: "available",
+  status: i % 2 === 0 ? "available" : "occupied",
 }));
 
 const mockOrders: Order[] = [];
@@ -38,8 +38,13 @@ export const apiService = {
     if (mockEnabled.value) {
       return mockResponse(mockTables);
     }
-    const response = await api.get(`/restaurants/${restaurantId}/tables`);
-    return response.data;
+    try {
+      const response = await api.get(`/restaurants/${restaurantId}/tables`);
+      return response.data;
+    } catch (error) {
+      console.error("API Error:", error);
+      return [];
+    }
   },
 
   getActiveOrder: async (tableId: string): Promise<Order | null> => {
@@ -50,7 +55,12 @@ export const apiService = {
         ) || null
       );
     }
-    const response = await api.get(`/tables/${tableId}/active-order`);
-    return response.data;
+    try {
+      const response = await api.get(`/tables/${tableId}/active-order`);
+      return response.data;
+    } catch (error) {
+      console.error("API Error:", error);
+      return null;
+    }
   },
 };
