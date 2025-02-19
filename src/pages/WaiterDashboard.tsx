@@ -1,86 +1,151 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/store";
 import { socketService } from "@/services/socket";
+import { apiService } from "@/services/api";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToastManager } from "@/hooks/use-toast-manager";
+import { DebugPanel } from "@/components/DebugPanel";
 import { Table } from "@/types";
-
-const MOCK_TABLES: Table[] = Array.from({ length: 10 }, (_, i) => ({
-  id: `table-${i + 1}`,
-  number: i + 1,
-  status: "available",
-}));
 
 const WaiterDashboard = () => {
   const { user, tables, setTables, activeTable, setActiveTable, orders } =
     useStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { showToast } = useToastManager();
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    const fetchTables = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const tables = await apiService.getTables("restaurant-1");
+        setTables(tables);
+        showToast("Tables loaded", undefined, "default", "short");
+      } catch (error) {
+        showToast(
+          "Error loading tables",
+          "Please try again later",
+          "destructive",
+          "medium"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     if (user) {
       socketService.connect(user.id);
-      setTables(MOCK_TABLES);
+      fetchTables();
     }
 
     return () => {
       socketService.disconnect();
     };
-  }, [user, setTables]);
+  }, [user, setTables, showToast]);
 
   const activeOrder = orders.find(
     (order) => order.tableId === activeTable && order.status === "active"
   );
 
+  const handleTableSelect = async (tableId: string) => {
+    setActiveTable(tableId);
+    try {
+      const order = await apiService.getActiveOrder(tableId);
+      if (order) {
+        // Handle existing order
+        showToast(
+          "Active order found",
+          `Order #${order.id}`,
+          "default",
+          "short"
+        );
+      }
+    } catch (error) {
+      showToast(
+        "Error loading order",
+        "Please try again later",
+        "destructive",
+        "medium"
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background transition-colors">
+      <DebugPanel />
+      
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         <header className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             Welcome, {user?.name}
           </h1>
-          <Button
-            variant="outline"
-            onClick={() => {
-              useStore.getState().setUser(null);
-            }}
-          >
-            Logout
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                useStore.getState().setUser(null);
+              }}
+            >
+              Logout
+            </Button>
+          </div>
         </header>
 
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Tables</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">Tables</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {tables.map((table) => (
-                <Button
-                  key={table.id}
-                  variant={activeTable === table.id ? "default" : "outline"}
-                  onClick={() => setActiveTable(table.id)}
-                  className="h-24"
-                >
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">
-                      Table {table.number}
+              {isLoading ? (
+                <div className="col-span-full text-center text-muted-foreground">
+                  Loading tables...
+                </div>
+              ) : (
+                tables.map((table) => (
+                  <Button
+                    key={table.id}
+                    variant={activeTable === table.id ? "default" : "outline"}
+                    onClick={() => handleTableSelect(table.id)}
+                    className="h-24"
+                  >
+                    <div className="text-center">
+                      <div className="text-lg font-semibold">
+                        Table {table.number}
+                      </div>
+                      <div
+                        className={`text-sm ${
+                          table.status === "available"
+                            ? "text-green-500"
+                            : "text-orange-500"
+                        }`}
+                      >
+                        {table.status}
+                      </div>
                     </div>
-                    <div
-                      className={`text-sm ${
-                        table.status === "available"
-                          ? "text-green-500"
-                          : "text-orange-500"
-                      }`}
-                    >
-                      {table.status}
-                    </div>
-                  </div>
-                </Button>
-              ))}
+                  </Button>
+                ))
+              )}
             </div>
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="text-xl font-semibold mb-4 text-foreground">
               {activeTable
                 ? `Table ${
                     tables.find((t) => t.id === activeTable)?.number
@@ -95,10 +160,10 @@ const WaiterDashboard = () => {
                       <Card key={item.id} className="p-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className="font-semibold">
+                            <div className="font-semibold text-foreground">
                               {item.plateId} x{item.quantity}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-muted-foreground">
                               {item.status}
                             </div>
                           </div>
@@ -106,6 +171,12 @@ const WaiterDashboard = () => {
                             variant="outline"
                             onClick={() => {
                               // Handle update quantity
+                              showToast(
+                                "Update quantity",
+                                "Feature coming soon",
+                                "default",
+                                "short"
+                              );
                             }}
                           >
                             Update
@@ -119,6 +190,12 @@ const WaiterDashboard = () => {
                     className="w-full"
                     onClick={() => {
                       // Handle create new order
+                      showToast(
+                        "Create order",
+                        "Feature coming soon",
+                        "default",
+                        "short"
+                      );
                     }}
                   >
                     Create New Order
